@@ -58,6 +58,7 @@ reset_password_model = api.model('ResetPassword', {
 # Register endpoint
 @api.route('/register')
 class Register(Resource):
+    @api.doc(security=None)
     @api.expect(user_model)
     def post(self):
         try:
@@ -95,6 +96,7 @@ class Register(Resource):
 # Login endpoint
 @api.route('/login')
 class Login(Resource):
+    @api.doc(security=None)
     @api.expect(login_model)
     def post(self):
         try:
@@ -213,6 +215,7 @@ api.add_namespace(admin_ns)
 
 @admin_ns.route('/register')
 class AdminRegister(Resource):
+    @api.doc(security=None)
     @api.expect(user_model)
     def post(self):
         try:
