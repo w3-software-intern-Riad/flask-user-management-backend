@@ -5,7 +5,7 @@ This project is a User Management API built with Flask, Flask-RESTPlus, and Post
 ## Features
 
 - User registration
-- User Login with JWT code creation
+- User Login with JWT token creation
 - CRUD operations for user information
 - Password reset functionality
 - Admin functionalities for user management
