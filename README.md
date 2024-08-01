@@ -56,11 +56,11 @@ This project is a User Management API built with Flask, Flask-RESTPlus, and Post
     ```sh
     flask run
     ```
-   The application will run on `http://127.0.0.1:5001`.
+   The application will run on `http://127.0.0.1:5000`.
 
 ### API Documentation
 
-The API documentation is available at `/api/swagger`.
+The API documentation is available at `http://127.0.0.1:5000/api/swagger`.
 
 ### API Endpoints
 
