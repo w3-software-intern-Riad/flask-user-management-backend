@@ -103,15 +103,19 @@ The API documentation is available at `http://127.0.0.1:5000/api/swagger`.
 
 #### Admin Endpoints
 
-- **Admin Register**: `POST /admin/register`
-  - **Description**: Registers a new user as an admin. The request body must include the following fields:
-    - `username`: The user's chosen username.
-    - `firstname`: The user's first name.
-    - `lastname`: The user's last name.
-    - `password`: The user's password (will be hashed).
-    - `email`: The user's email address.
-    - `role` : By default ADMIN
-  - **Response**: A success message indicating that the admin was created successfully or an error message if the registration fails.
+**Admin Register**: `POST /admin/register`
+- **Description**: Registers a new user as an admin. This route is used for the initial setup of the root admin account only. After successful registration, a file will be created indicating whether the root admin has been set up. If this file shows `root_admin_created: true`, further requests to this route will be blocked.
+- **Request Body**:
+  - `username`: The user's chosen username.
+  - `firstname`: The user's first name.
+  - `lastname`: The user's last name.
+  - `password`: The user's password (will be hashed).
+  - `email`: The user's email address.
+  - `role`: By default, `ADMIN`.
+- **Response**: 
+  - **Success**: A message confirming the admin account was created successfully.
+  - **Error**: An error message if registration fails or if the route has been accessed after the root admin setup is complete.
+
 - **Update Admin Data**: `PUT /admin/update_profile`
   - **Description**: Updates admin information. Requires a valid JWT token for authentication. The request body can include any of the following fields:
     - `username`: The user's new username.

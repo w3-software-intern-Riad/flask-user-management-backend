@@ -7,6 +7,26 @@ from models import db, User, RoleEnum
 
 api_bp = Blueprint('api', __name__)
 
+import os
+import json
+
+class FileStorage:
+    def __init__(self, filename='root_admin_created.json'):
+        self.filename = filename
+
+    def is_root_admin_created(self):
+        if not os.path.exists(self.filename):
+            return False
+        with open(self.filename, 'r') as f:
+            data = json.load(f)
+        return data.get('root_admin_created', False)
+
+    def set_root_admin_created(self):
+        with open(self.filename, 'w') as f:
+            json.dump({'root_admin_created': True}, f)
+
+file_storage = FileStorage()
+
 # Initialize API with proper authorization
 authorizations = {
     'Bearer Auth': {
@@ -232,15 +252,19 @@ class AdminRegister(Resource):
     @api.expect(user_model)
     def post(self):
         try:
-            data = request.json
+            # Check if root admin already exists
+            if file_storage.is_root_admin_created():
+                return {'message': 'Root admin already created. Further registrations not allowed.'}, 403
 
-            required_fields = ['username', 'firstname', 'lastname', 'password', 'email']
+            data = request.json
+            
+            required_fields = ['username', 'firstname', 'lastname', 'password', 'email','active']
             if not all(field in data for field in required_fields):
                 return {'message': 'Missing required fields'}, 400
-
+            
             if User.query.filter_by(email=data['email']).first():
                 return {'message': 'User already exists'}, 400
-
+            
             new_user = User(
                 username=data['username'],
                 firstname=data['firstname'],
@@ -249,15 +273,20 @@ class AdminRegister(Resource):
                 email=data['email'],
                 role=RoleEnum.ADMIN
             )
-
+            
             db.session.add(new_user)
             db.session.commit()
-
-            return {'message': 'Admin created successfully'}, 201
-
+            
+            # Set the flag that root admin has been created
+            file_storage.set_root_admin_created()
+            
+            return {'message': 'Root admin created successfully'}, 201
+        
         except Exception as e:
             db.session.rollback()
             return {'message': 'An error occurred', 'error': str(e)}, 500
+        
+
 @admin_ns.route('/update_profile')
 class AdminUpdateProfile(Resource):
      @api.doc(security='Bearer Auth')
