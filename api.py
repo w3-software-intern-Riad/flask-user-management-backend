@@ -146,6 +146,8 @@ class UpdateUser(Resource):
             user = User.query.get(user_id)
             if not user:
                 return {'message': 'User not found'}, 404
+            if user.role==RoleEnum.ADMIN:
+                return {'message': 'You are Admin,Please change your data through admin route'}, 403
 
             # Validate input data
             if 'username' in data:
