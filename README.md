@@ -93,10 +93,29 @@ The API documentation is available at `http://127.0.0.1:5000/api/swagger`.
     - `email`: The user's new email address.
     - `active`: The user's new active status (`true` or `false`).
   - **Response**: A success message if the user data is updated successfully or an error message if the update fails
+- **Forget Password**: `POST /forget_password`
+  - **Description**: Generates a password reset token and provides a reset link. The request body must include:
+   `email`: The user's email address.
+  - **Response**: A reset link containing the JWT token as a query parameter.
+
 - **Reset Password**: `PATCH /reset_password`
   - **Description**: Resets the user's password. Requires a valid JWT token for authentication. The request body must include:
-    - `new_password`: The new password (will be hashed).
+   `new_password`: The new password (will be hashed).
   - **Response**: A success message if the password is updated successfully or an error message if the reset fails.
+
+- ## Workflow
+
+1. **Forget Password Flow**:
+   - **Request**: The user sends a `POST` request to `/forget_password` with their email address.
+   - **Response**: The server generates a JWT token with the email as the identifier and returns a reset link in the format `http://127.0.0.1:5000/reset_password?token={generatedToken}`.
+
+2. **Reset Password Flow**:
+   - **Request**: The user accesses the reset link and sends a `PATCH` request to `/reset_password` with the token as a query parameter and the new password in the request body.
+   - **Processing**:
+     - The server extracts the token from the query parameter and decodes it to retrieve the email.
+     - The server verifies if the email exists in the database.
+     - If the email exists, the server updates the user's password with the new hashed password.
+   - **Response**: The server returns a success message if the password is updated successfully, or an error message if the reset fails.
 - **Delete Account**: `DELETE /account`
   - **Description**: Deletes the user's account. Requires a valid JWT token for authentication.
   - **Response**: A success message if the account is deleted successfully or an error message if the deletion fails.

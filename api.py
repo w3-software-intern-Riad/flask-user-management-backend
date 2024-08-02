@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify
 from flask_restx import Api, Resource, fields, Namespace
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
+from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity,decode_token
 from datetime import timedelta
 from models import db, User, RoleEnum
+import datetime
+import jwt
 
 api_bp = Blueprint('api', __name__)
 
@@ -81,6 +83,9 @@ update_user_model_by_admin = api.model('UpdateUserByAdmin', {
     'active': fields.Boolean(description='The user\'s active status')
 })
 
+forget_password_model = api.model('ForgetPassword', {
+    'email': fields.String(required=True, description='The user\'s email address')
+})
 
 reset_password_model = api.model('ResetPassword', {
     'new_password': fields.String(required=True, description='The new password')
@@ -192,33 +197,61 @@ class UpdateUser(Resource):
             db.session.rollback()
             return {'message': 'An error occurred', 'error': str(e)}, 500
 
+#Forget password endpoint
 
-# Reset password endpoint
+@api.route('/forget_password')
+class ForgetPassword(Resource):
+    @api.doc(security=None)
+    @api.expect(forget_password_model)
+    def post(self):
+        data = request.json
+        email = data.get('email')
+
+        if not email:
+            return {'message': 'Email is required'}, 400
+
+        # Generate a password reset token
+        expires = timedelta(hours=1)
+        access_token = create_access_token(identity=email, expires_delta=expires)
+
+        reset_link = f'http://127.0.0.1:5000/api/reset_password?token={access_token}'
+
+        return {'reset_link': reset_link}, 200
+
+
 @api.route('/reset_password')
 class ResetPassword(Resource):
-    @api.doc(security='Bearer Auth')
-    @jwt_required()
+    @api.doc(security=None, params={'token': 'JWT reset token'})
     @api.expect(reset_password_model)
-    def patch(self):
+    def post(self):
+        token = request.args.get('token')
+
+        if not token:
+            return {'message': 'Token is required'}, 400
+
         try:
-            data = request.json
-            current_user_id = get_jwt_identity()
+            decoded_token = decode_token(token)
+            email = decoded_token['sub']  # 'sub' is the identity in JWT, which is the email in this case
+            
+        except jwt.ExpiredSignatureError:
+            return {'message': 'Token has expired'}, 400
+        except jwt.InvalidTokenError:
+            return {'message': 'Invalid token'}, 400
 
-            if 'new_password' not in data:
-                return {'message': 'New password is required'}, 400
+        data = request.json
+        new_password = data.get('new_password')
 
-            user = User.query.get(current_user_id)
-            if not user:
-                return {'message': 'User not found'}, 404
+        if not new_password:
+            return {'message': 'New password is required'}, 400
 
-            user.password = generate_password_hash(data['new_password'])
-
+        user = User.query.filter_by(email=email).first()
+        if user:
+            user.password = generate_password_hash(new_password)
             db.session.commit()
-            return {'message': 'Password updated successfully'}, 200
+        else:
+            return {'message': 'User not found'}, 404
 
-        except Exception as e:
-            db.session.rollback()
-            return {'message': 'An error occurred', 'error': str(e)}, 500
+        return {'message': 'Password has been reset successfully'}, 200
 
 # Delete account endpoint
 @api.route('/account')
