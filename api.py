@@ -33,7 +33,7 @@ user_model = api.model('User', {
     'lastname': fields.String(required=True, description='The user\'s last name'),
     'password': fields.String(required=True, description='The user\'s password'),
     'email': fields.String(required=True, description='The user\'s email address'),
-    'role': fields.String(description='The user\'s role'),
+   
     'active': fields.Boolean(description='The user\'s active status')
 })
 
@@ -50,6 +50,17 @@ update_user_model = api.model('UpdateUser', {
     'email': fields.String(description='The user\'s email address'),
     'active': fields.Boolean(description='The user\'s active status')
 })
+
+update_user_model_by_admin = api.model('UpdateUserByAdmin', {
+    'username': fields.String(description='The user\'s username'),
+    'firstname': fields.String(description='The user\'s first name'),
+    'lastname': fields.String(description='The user\'s last name'),
+    'password': fields.String(description='The user\'s password'),
+    'email': fields.String(description='The user\'s email address'),
+    'role': fields.String(description='set by admin role (ADMIN,USER)'),
+    'active': fields.Boolean(description='The user\'s active status')
+})
+
 
 reset_password_model = api.model('ResetPassword', {
     'new_password': fields.String(required=True, description='The new password')
@@ -245,12 +256,57 @@ class AdminRegister(Resource):
         except Exception as e:
             db.session.rollback()
             return {'message': 'An error occurred', 'error': str(e)}, 500
+@admin_ns.route('/update_profile')
+class AdminUpdateProfile(Resource):
+     @api.doc(security='Bearer Auth')
+     @jwt_required()
+     @api.expect(update_user_model_by_admin)
+     def put(self):
+        try:
+            data = request.json
+            user_id = get_jwt_identity()
 
+            user = User.query.get(user_id)
+            if not user:
+                return {'message': 'User not found'}, 404
+            if user.role != RoleEnum.ADMIN:
+                return {'message': 'You are not Admin'}, 403
+
+            # Validate input data
+            if 'username' in data:
+                user.username = data['username']
+            if 'firstname' in data:
+                user.firstname = data['firstname']
+            if 'lastname' in data:
+                user.lastname = data['lastname']
+            if 'password' in data:
+                user.password = generate_password_hash(data['password'])
+            if 'role' in data:
+                if data['role'] in RoleEnum.__members__:
+                    user.role = RoleEnum[data['role']]
+                else:
+                    return {'message': 'Invalid role'}, 400    
+            if 'email' in data:
+                if User.query.filter_by(email=data['email']).first() and data['email'] != user.email:
+                    return {'message': 'Email already in use'}, 400
+                user.email = data['email']
+            if 'active' in data:
+                user.active = data['active']
+
+            db.session.commit()
+            return {'message': 'Admin data updated successfully'}, 200
+
+        except Exception as e:
+            db.session.rollback()
+            return {'message': 'An error occurred', 'error': str(e)}, 500
+
+
+        
 @admin_ns.route('/promote/<int:user_id>')
 class PromoteUser(Resource):
     @api.doc(security='Bearer Auth')
     @jwt_required()
-    @api.expect(update_user_model)
+    @api.expect(update_user_model_by_admin)
     def put(self, user_id):
         try:
             data = request.json
@@ -263,7 +319,8 @@ class PromoteUser(Resource):
             user = User.query.get(user_id)
             if not user:
                 return {'message': 'User not found'}, 404
-
+            if user.role == RoleEnum.ADMIN:
+                return {'message': 'You cannot change information of another admin\'s profile'}, 403
             if 'role' in data:
                 if data['role'] in RoleEnum.__members__:
                     user.role = RoleEnum[data['role']]

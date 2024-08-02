@@ -112,6 +112,19 @@ The API documentation is available at `http://127.0.0.1:5000/api/swagger`.
     - `email`: The user's email address.
     - `role` : By default ADMIN
   - **Response**: A success message indicating that the admin was created successfully or an error message if the registration fails.
+- **Update Admin Data**: `PUT /admin/update_profile`
+  - **Description**: Updates admin information. Requires a valid JWT token for authentication. The request body can include any of the following fields:
+    - `username`: The user's new username.
+    - `firstname`: The user's new first name.
+    - `lastname`: The user's new last name.
+    - `password`: The user's new password (will be hashed).
+    - `email`: The user's new email address.
+    - `role` : The user's now set the role (ADMIN/USER)
+    - `active`: The user's new active status (`true` or `false`).
+  - **Response**: A success message if the user data is updated successfully or an error message if the update fails
+
+
+
 - **Promote User**: `PUT /admin/promote/<int:user_id>`
 
   - **Description**: Promotes a user to an admin role. Requires a valid JWT token for authentication with an `ADMIN` role. The request body can include:
